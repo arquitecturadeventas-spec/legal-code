@@ -1,0 +1,7 @@
+name = "legal-code"
+main = "index.js"
+compatibility_date = "2026-05-29"
+
+[[kv_namespaces]]
+binding = "CODES_KV"
+id = "30cc297663374364bcce1b2dcb0dc716"
