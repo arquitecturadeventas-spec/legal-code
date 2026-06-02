@@ -6,18 +6,23 @@ export default {
     // =============================
     // MODO PRUEBA (sin modificar KV)
     // =============================
-    const TEST_MODE = true;  // ← Cambia a false en producción
+    const TEST_MODE = true;
     const TEST_CODES = ["CODE001", "CODE002", "CODE003", "CODE004", "CODE005"];
 
     // =============================
-    // 1. LOGIN CHECK (Google sub)
+    // 1. CHECK SESIÓN (cookie o token)
     // =============================
-    const body = await safeJson(request);
-
+    const cookies = request.headers.get("cookie") || "";
+    const sessionMatch = cookies.match(/session=([^;]+)/);
     let userId = null;
 
-    if (body?.token) {
-      userId = parseJwt(body.token)?.sub || null;
+    if (sessionMatch) {
+      userId = sessionMatch[1];
+    } else {
+      const body = await safeJson(request);
+      if (body?.token) {
+        userId = parseJwt(body.token)?.sub || null;
+      }
     }
 
     if (!userId) {
@@ -44,7 +49,7 @@ export default {
       if (codes.length === 0) {
         code = "NO_CODES_LEFT";
       } else {
-        code = codes[0];  // En TEST_MODE solo usa, no elimina
+        code = codes[0];
 
         record = {
           code,
@@ -52,7 +57,6 @@ export default {
           created: Date.now()
         };
 
-        // En TEST_MODE no guarda en KV
         if (!TEST_MODE) {
           await env.CODES_KV.put(userKey, JSON.stringify(record));
           await env.CODES_KV.put("codes", JSON.stringify(codes.slice(1)));
@@ -64,7 +68,7 @@ export default {
     }
 
     // =============================
-    // 4. VIEW LIMIT (server-side)
+    // 4. VIEW LIMIT
     // =============================
     let hidden = false;
 
@@ -74,14 +78,23 @@ export default {
       } else {
         record.views++;
         
-        // En TEST_MODE no guarda en KV
         if (!TEST_MODE) {
           await env.CODES_KV.put(userKey, JSON.stringify(record));
         }
       }
     }
 
-    return html(renderApp(code, hidden));
+    // =============================
+    // 5. CREAR RESPUESTA CON COOKIE
+    // =============================
+    const response = new Response(renderApp(code, hidden), {
+      headers: {
+        "content-type": "text/html;charset=UTF-8",
+        "set-cookie": `session=${userId}; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax`
+      }
+    });
+
+    return response;
   }
 };
 
@@ -148,6 +161,11 @@ h1{
   background:#2563eb;
   color:white;
   font-weight:600;
+  cursor:pointer;
+}
+
+.btn:hover{
+  background:#1d4ed8;
 }
 </style>
 
@@ -167,9 +185,17 @@ ${hidden ? "REDACTED" : code}
 Limited access: 5 views per account
 </div>
 
-<button class="btn">Copy Code</button>
+<button class="btn" onclick="copyCode()">Copy Code</button>
 
 </div>
+
+<script>
+function copyCode() {
+  const code = document.querySelector('.code').textContent.trim();
+  navigator.clipboard.writeText(code);
+  alert('Code copied!');
+}
+</script>
 
 </body>
 </html>
@@ -206,6 +232,20 @@ body{
   padding:40px;
   border-radius:18px;
   box-shadow:0 10px 30px rgba(0,0,0,.08);
+  width:92%;
+  max-width:380px;
+}
+
+h2{
+  margin:0 0 15px 0;
+  color:#111;
+  font-size:24px;
+}
+
+p{
+  margin:0 0 30px 0;
+  color:#666;
+  font-size:14px;
 }
 
 #google_btn{
