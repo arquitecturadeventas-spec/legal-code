@@ -205,18 +205,18 @@ Limited access: 5 views per account
 
 <div class="buttons">
   <button class="btn btn-gemini" onclick="openGemini()">GEMINI LEGAL CORE</button>
-  <button class="btn btn-ebook" onclick="openEbook()">EBOOK</button>
+  <button class="btn btn-ebook" onclick="openEbook()">EBOOK WSPM</button>
 </div>
 
 </div>
 
 <script>
 function openGemini(){
-  window.open('https://gemini.google.com', '_blank');
+  window.open('https://gemini.google.com/gem/1GXwkzDXe-HjMtE5K3eq9-8CNh4Q3trBu?usp=sharing', '_blank');
 }
 
 function openEbook(){
-  window.open('https://ejemplo.com/ebook', '_blank');
+  window.open('https://1drv.ms/b/c/af8a827fb8c189ff/IQBXA82JtsfGQqwDTaFdXgdPAVqjhkMqEMKqTm_kyWsYti0?e=ySypji', '_blank');
 }
 </script>
 
