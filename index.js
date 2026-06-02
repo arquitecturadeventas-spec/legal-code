@@ -4,6 +4,92 @@ export default {
     const url = new URL(request.url);
 
     // =============================
+    // MODO PRUEBA (sin modificar KV)
+    // =============================
+    const TEST_MODE = true;  // ← Cambia a false en producción
+    const TEST_CODES = ["CODE001", "CODE002", "CODE003", "CODE004", "CODE005"];
+
+    // =============================
+    // 1. LOGIN CHECK (Google sub)
+    // =============================
+    const body = await safeJson(request);
+
+    let userId = null;
+
+    if (body?.token) {
+      userId = parseJwt(body.token)?.sub || null;
+    }
+
+    if (!userId) {
+      return html(renderLoginPage());
+    }
+
+    const userKey = "user:" + userId;
+
+    // =============================
+    // 2. GET USER RECORD
+    // =============================
+    let record = await env.CODES_KV.get(userKey);
+    record = record ? JSON.parse(record) : null;
+
+    let code;
+
+    // =============================
+    // 3. ASSIGN CODE IF NEW USER
+    // =============================
+    if (!record) {
+
+      let codes = TEST_MODE ? TEST_CODES : JSON.parse(await env.CODES_KV.get("codes") || "[]");
+
+      if (codes.length === 0) {
+        code = "NO_CODES_LEFT";
+      } else {
+        code = codes[0];  // En TEST_MODE solo usa, no elimina
+
+        record = {
+          code,
+          views: 0,
+          created: Date.now()
+        };
+
+        // En TEST_MODE no guarda en KV
+        if (!TEST_MODE) {
+          await env.CODES_KV.put(userKey, JSON.stringify(record));
+          await env.CODES_KV.put("codes", JSON.stringify(codes.slice(1)));
+        }
+      }
+
+    } else {
+      code = record.code;
+    }
+
+    // =============================
+    // 4. VIEW LIMIT (server-side)
+    // =============================
+    let hidden = false;
+
+    if (record) {
+      if (record.views >= 5) {
+        hidden = true;
+      } else {
+        record.views++;
+        
+        // En TEST_MODE no guarda en KV
+        if (!TEST_MODE) {
+          await env.CODES_KV.put(userKey, JSON.stringify(record));
+        }
+      }
+    }
+
+    return html(renderApp(code, hidden));
+  }
+};
+export default {
+  async fetch(request, env) {
+
+    const url = new URL(request.url);
+
+    // =============================
     // 1. LOGIN CHECK (Google sub)
     // =============================
     const body = await safeJson(request);
