@@ -1,35 +1,186 @@
 export default {
   async fetch(request, env) {
 
-    const raw = await env.CODES_KV.get("codes");
-    let codes = JSON.parse(raw || "[]");
+    const url = new URL(request.url);
 
-    let code = "NO_CODES_LEFT";
+    // =============================
+    // 1. LOGIN CHECK (Google sub)
+    // =============================
+    const body = await safeJson(request);
 
-    if (codes.length > 0) {
-      code = codes.shift();
+    let userId = null;
 
-      await env.CODES_KV.put(
-        "codes",
-        JSON.stringify(codes)
-      );
+    if (body?.token) {
+      userId = parseJwt(body.token)?.sub || null;
     }
 
-    return new Response(`
+    if (!userId) {
+      return html(renderLoginPage());
+    }
+
+    const userKey = "user:" + userId;
+
+    // =============================
+    // 2. GET USER RECORD
+    // =============================
+    let record = await env.CODES_KV.get(userKey);
+    record = record ? JSON.parse(record) : null;
+
+    let code;
+
+    // =============================
+    // 3. ASSIGN CODE IF NEW USER
+    // =============================
+    if (!record) {
+
+      let codes = JSON.parse(await env.CODES_KV.get("codes") || "[]");
+
+      if (codes.length === 0) {
+        code = "NO_CODES_LEFT";
+      } else {
+        code = codes.shift();
+
+        record = {
+          code,
+          views: 0,
+          created: Date.now()
+        };
+
+        await env.CODES_KV.put(userKey, JSON.stringify(record));
+        await env.CODES_KV.put("codes", JSON.stringify(codes));
+      }
+
+    } else {
+      code = record.code;
+    }
+
+    // =============================
+    // 4. VIEW LIMIT (server-side)
+    // =============================
+    let hidden = false;
+
+    if (record) {
+      if (record.views >= 5) {
+        hidden = true;
+      } else {
+        record.views++;
+        await env.CODES_KV.put(userKey, JSON.stringify(record));
+      }
+    }
+
+    return html(renderApp(code, hidden));
+  }
+};
+
+// =============================
+// UX CLEAN (NO "HACKER LOOK")
+// =============================
+
+function renderApp(code, hidden) {
+  return `
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Confidential Access</title>
+<title>Dashboard</title>
 
 <style>
-
 body{
   margin:0;
-  background:#0b1020;
+  font-family:system-ui, Arial;
+  background:#f4f6f8;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+
+.card{
+  width:92%;
+  max-width:520px;
+  background:white;
+  border-radius:18px;
+  padding:30px;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+}
+
+h1{
+  font-size:22px;
+  margin-bottom:20px;
+  color:#111;
+}
+
+.code{
+  font-size:26px;
+  padding:18px;
+  background:#111;
+  color:#fff;
+  border-radius:12px;
+  word-break:break-all;
+}
+
+.info{
+  margin-top:12px;
+  color:#666;
+  font-size:14px;
+}
+
+.btn{
+  margin-top:20px;
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:10px;
+  background:#2563eb;
   color:white;
-  font-family:Arial,sans-serif;
+  font-weight:600;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="card">
+
+<h1>Your Access Code</h1>
+
+<div class="code">
+${hidden ? "REDACTED" : code}
+</div>
+
+<div class="info">
+Limited access: 5 views per account
+</div>
+
+<button class="btn">Copy Code</button>
+
+</div>
+
+</body>
+</html>
+`;
+}
+
+// =============================
+// LOGIN PAGE (GOOGLE ONE TAP)
+// =============================
+
+function renderLoginPage() {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Login</title>
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#f4f6f8;
   display:flex;
   justify-content:center;
   align-items:center;
@@ -37,101 +188,67 @@ body{
 }
 
 .box{
-  width:90%;
-  max-width:700px;
-  padding:40px;
-  border-radius:20px;
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.1);
-}
-
-h1{
-  font-size:48px;
-  margin:0 0 20px;
-}
-
-.code{
-  margin-top:20px;
-  padding:20px;
-  font-size:30px;
-  background:black;
-  border-radius:14px;
-  word-break:break-all;
-}
-
-.info{
-  margin-top:15px;
-  opacity:.7;
-}
-
-.buttons{
-  margin-top:30px;
-  display:grid;
-  gap:10px;
-}
-
-a{
-  text-decoration:none;
-  padding:16px;
-  border-radius:12px;
   text-align:center;
-  color:white;
-  font-weight:bold;
+  background:white;
+  padding:40px;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
 }
-
-.ai{
-  background:#d4af37;
-  color:black;
-}
-
-.ebook{
-  background:#1f3f7a;
-}
-
 </style>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+window.onload = () => {
+  google.accounts.id.initialize({
+    client_id: "YOUR_GOOGLE_CLIENT_ID",
+    callback: handle
+  });
+
+  google.accounts.id.prompt();
+};
+
+function handle(res){
+  fetch("/", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ token: res.credential })
+  }).then(() => location.reload());
+}
+</script>
+
 </head>
 
 <body>
 
 <div class="box">
-
-<h1>One code. Limited visibility.</h1>
-
-<div class="code" id="code">${code}</div>
-
-<div class="info">
-Remaining server codes: ${codes.length}
+<h2>Sign in</h2>
+<p>Continue with Google</p>
 </div>
-
-<div class="buttons">
-  <a class="ai" href="#">OPEN AI</a>
-  <a class="ebook" href="#">OPEN EBOOK</a>
-</div>
-
-</div>
-
-<script>
-
-const LIMIT = 5;
-const KEY = "views";
-
-let views = Number(localStorage.getItem(KEY) || "0");
-
-if(views >= LIMIT){
-  document.getElementById("code").innerText = "REDACTED";
-}else{
-  views++;
-  localStorage.setItem(KEY, views);
-}
-
-</script>
 
 </body>
 </html>
-`, {
-      headers: {
-        "content-type": "text/html;charset=UTF-8"
-      }
-    });
+`;
+}
+
+// =============================
+// HELPERS
+// =============================
+
+function html(str) {
+  return new Response(str, {
+    headers: { "content-type": "text/html;charset=UTF-8" }
+  });
+}
+
+async function safeJson(req) {
+  try { return await req.json(); } catch { return null; }
+}
+
+function parseJwt(token) {
+  try {
+    return JSON.parse(atob(token.split(".")[1]));
+  } catch {
+    return null;
   }
 }
