@@ -164,7 +164,7 @@ Limited access: 5 views per account
 }
 
 // =============================
-// LOGIN PAGE (GOOGLE ONE TAP)
+// LOGIN PAGE (GOOGLE MANUAL BUTTON)
 // =============================
 
 function renderLoginPage() {
@@ -194,6 +194,12 @@ body{
   border-radius:18px;
   box-shadow:0 10px 30px rgba(0,0,0,.08);
 }
+
+#google_btn{
+  display:flex;
+  justify-content:center;
+  margin-top:20px;
+}
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -205,7 +211,10 @@ window.onload = () => {
     callback: handle
   });
 
-  google.accounts.id.prompt();
+  google.accounts.id.renderButton(
+    document.getElementById('google_btn'),
+    { theme: 'filled_blue', size: 'large' }
+  );
 };
 
 function handle(res){
@@ -224,6 +233,7 @@ function handle(res){
 <div class="box">
 <h2>Sign in</h2>
 <p>Continue with Google</p>
+<div id="google_btn"></div>
 </div>
 
 </body>
