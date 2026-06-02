@@ -4,13 +4,7 @@ export default {
     const url = new URL(request.url);
 
     // =============================
-    // MODO PRUEBA (sin modificar KV)
-    // =============================
-    const TEST_MODE = true;
-    const TEST_CODES = ["CODE001", "CODE002", "CODE003", "CODE004", "CODE005"];
-
-    // =============================
-    // 1. CHECK SESIÓN (cookie o token)
+    // 1. CHECK SESIÓN
     // =============================
     const cookies = request.headers.get("cookie") || "";
     const sessionMatch = cookies.match(/session=([^;]+)/);
@@ -44,7 +38,7 @@ export default {
     // =============================
     if (!record) {
 
-      let codes = TEST_MODE ? TEST_CODES : JSON.parse(await env.CODES_KV.get("codes") || "[]");
+      let codes = JSON.parse(await env.CODES_KV.get("CODES") || "[]");
 
       if (codes.length === 0) {
         code = "NO_CODES_LEFT";
@@ -57,10 +51,8 @@ export default {
           created: Date.now()
         };
 
-        if (!TEST_MODE) {
-          await env.CODES_KV.put(userKey, JSON.stringify(record));
-          await env.CODES_KV.put("codes", JSON.stringify(codes.slice(1)));
-        }
+        await env.CODES_KV.put(userKey, JSON.stringify(record));
+        await env.CODES_KV.put("CODES", JSON.stringify(codes.slice(1)));
       }
 
     } else {
@@ -77,10 +69,7 @@ export default {
         hidden = true;
       } else {
         record.views++;
-        
-        if (!TEST_MODE) {
-          await env.CODES_KV.put(userKey, JSON.stringify(record));
-        }
+        await env.CODES_KV.put(userKey, JSON.stringify(record));
       }
     }
 
@@ -99,7 +88,7 @@ export default {
 };
 
 // =============================
-// UX CLEAN (NO "HACKER LOOK")
+// UX CLEAN
 // =============================
 
 function renderApp(code, hidden) {
@@ -224,6 +213,95 @@ function openEbook(){
 </html>
 `;
 }
+
+function renderLoginPage() {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Login</title>
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#f4f6f8;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+}
+
+.box{
+  text-align:center;
+  background:white;
+  padding:40px;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+  width:92%;
+  max-width:380px;
+}
+
+h2{
+  margin:0 0 15px 0;
+  color:#111;
+  font-size:24px;
+}
+
+p{
+  margin:0 0 30px 0;
+  color:#666;
+  font-size:14px;
+}
+
+#google_btn{
+  display:flex;
+  justify-content:center;
+  margin-top:20px;
+}
+</style>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+window.onload = () => {
+  google.accounts.id.initialize({
+    client_id: "572050713821-j2kr6dlfpql6e2vtbgq9hlnunsj16cgk.apps.googleusercontent.com",
+    callback: handle
+  });
+
+  google.accounts.id.renderButton(
+    document.getElementById('google_btn'),
+    { theme: 'filled_blue', size: 'large' }
+  );
+};
+
+function handle(res){
+  fetch("/", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ token: res.credential })
+  }).then(() => location.reload());
+}
+</script>
+
+</head>
+
+<body>
+
+<div class="box">
+<h2>Sign in</h2>
+<p>Continue with Google</p>
+<div id="google_btn"></div>
+</div>
+
+</body>
+</html>
+`;
+}
+
 // =============================
 // HELPERS
 // =============================
