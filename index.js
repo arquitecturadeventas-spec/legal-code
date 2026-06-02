@@ -144,27 +144,45 @@ h1{
   color:#fff;
   border-radius:12px;
   word-break:break-all;
+  margin-bottom:20px;
 }
 
 .info{
-  margin-top:12px;
+  margin-bottom:20px;
   color:#666;
   font-size:14px;
 }
 
+.buttons{
+  display:flex;
+  gap:12px;
+}
+
 .btn{
-  margin-top:20px;
-  width:100%;
+  flex:1;
   padding:14px;
   border:none;
   border-radius:10px;
-  background:#2563eb;
   color:white;
   font-weight:600;
   cursor:pointer;
+  font-size:14px;
+  transition:0.2s;
 }
 
-.btn:hover{
+.btn-gemini{
+  background:#7c3aed;
+}
+
+.btn-gemini:hover{
+  background:#6d28d9;
+}
+
+.btn-ebook{
+  background:#2563eb;
+}
+
+.btn-ebook:hover{
   background:#1d4ed8;
 }
 </style>
@@ -185,15 +203,20 @@ ${hidden ? "REDACTED" : code}
 Limited access: 5 views per account
 </div>
 
-<button class="btn" onclick="copyCode()">Copy Code</button>
+<div class="buttons">
+  <button class="btn btn-gemini" onclick="openGemini()">GEMINI LEGAL CORE</button>
+  <button class="btn btn-ebook" onclick="openEbook()">EBOOK</button>
+</div>
 
 </div>
 
 <script>
-function copyCode() {
-  const code = document.querySelector('.code').textContent.trim();
-  navigator.clipboard.writeText(code);
-  alert('Code copied!');
+function openGemini(){
+  window.open('https://gemini.google.com', '_blank');
+}
+
+function openEbook(){
+  window.open('https://ejemplo.com/ebook', '_blank');
 }
 </script>
 
@@ -201,99 +224,6 @@ function copyCode() {
 </html>
 `;
 }
-
-// =============================
-// LOGIN PAGE (GOOGLE MANUAL BUTTON)
-// =============================
-
-function renderLoginPage() {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Login</title>
-
-<style>
-body{
-  margin:0;
-  font-family:system-ui;
-  background:#f4f6f8;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  min-height:100vh;
-}
-
-.box{
-  text-align:center;
-  background:white;
-  padding:40px;
-  border-radius:18px;
-  box-shadow:0 10px 30px rgba(0,0,0,.08);
-  width:92%;
-  max-width:380px;
-}
-
-h2{
-  margin:0 0 15px 0;
-  color:#111;
-  font-size:24px;
-}
-
-p{
-  margin:0 0 30px 0;
-  color:#666;
-  font-size:14px;
-}
-
-#google_btn{
-  display:flex;
-  justify-content:center;
-  margin-top:20px;
-}
-</style>
-
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-
-<script>
-window.onload = () => {
-  google.accounts.id.initialize({
-    client_id: "572050713821-j2kr6dlfpql6e2vtbgq9hlnunsj16cgk.apps.googleusercontent.com",
-    callback: handle
-  });
-
-  google.accounts.id.renderButton(
-    document.getElementById('google_btn'),
-    { theme: 'filled_blue', size: 'large' }
-  );
-};
-
-function handle(res){
-  fetch("/", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ token: res.credential })
-  }).then(() => location.reload());
-}
-</script>
-
-</head>
-
-<body>
-
-<div class="box">
-<h2>Sign in</h2>
-<p>Continue with Google</p>
-<div id="google_btn"></div>
-</div>
-
-</body>
-</html>
-`;
-}
-
 // =============================
 // HELPERS
 // =============================
