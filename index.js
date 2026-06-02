@@ -207,7 +207,7 @@ body{
 <script>
 window.onload = () => {
   google.accounts.id.initialize({
-    client_id: "YOUR_GOOGLE_CLIENT_ID",
+    client_id: "572050713821-j2kr6dlfpql6e2vtbgq9hlnunsj16cgk.apps.googleusercontent.com",
     callback: handle
   });
 
