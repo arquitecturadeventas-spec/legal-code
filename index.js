@@ -191,7 +191,7 @@ ${hidden ? "REDACTED" : code}
 <div class="info">
 Limited access: 5 views per account
 </div>
-
+<img src="https://i.postimg.cc/XYBZ6C5P/30-removebg-preview.png" alt="30 Day Money Back Guarantee" style="width:120px; display:block; margin:0 auto 20px auto;">
 <div class="buttons">
   <button class="btn btn-gemini" onclick="openGemini()">GEMINI LEGAL CORE</button>
   <button class="btn btn-ebook" onclick="openEbook()">EBOOK WSPM</button>
